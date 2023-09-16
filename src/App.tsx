@@ -1,9 +1,11 @@
 import { Button } from './components/ui/button'
-import { Github, FileVideo, Upload, Wand2 } from 'lucide-react'
+import { Github, Wand2 } from 'lucide-react'
 import { Separator } from './components/ui/separator'
 import { Textarea } from './components/ui/textarea'
 import { Label } from './components/ui/label'
 import { Slider } from './components/ui/slider'
+import { VideoInputForm } from './components/video-input-form'
+import { PromptSelect } from './components/prompt-select'
 import {
   Select,
   SelectTrigger,
@@ -11,18 +13,44 @@ import {
   SelectValue,
   SelectContent,
 } from './components/ui/select'
+import { useState } from 'react'
+import { useCompletion } from 'ai/react'
 
 export function App() {
+  const [temperature, setTemperature] = useState(0.5)
+  const [videoId, setVideoId] = useState<string | null>(null)
+
+  const {
+    input,
+    setInput,
+    handleInputChange,
+    handleSubmit,
+    completion,
+    isLoading,
+  } = useCompletion({
+    api: 'http://localhost:3333/ai/complete',
+    body: {
+      videoId,
+      temperature,
+    },
+    headers: {
+      'Content-type': 'application/json',
+    },
+  })
+
   return (
-    <div className='min-h-screen flex flex-col'>
+    <div className='min-h-screen flex flex-col bg-background'>
       <div className='px-6 flex items-center justify-between border-b py-3'>
-        <h1 className='text-xl font-bold'>Flow Upload Ai.</h1>
+        <img className='h-8' src='/flow-upload-logo.svg' />
         <div className='flex items-center gap-3'>
           <span className='text-sm text-muted-foreground'>
             Developed with ❤ at Rocketseat NLW
           </span>
 
-          <Separator orientation='vertical' className='h-6'></Separator>
+          <Separator
+            orientation='vertical'
+            className='h-6 bg-muted-foreground'
+          ></Separator>
 
           <Button variant={'secondary'}>
             <Github className='w-4 h-4 mr-2'></Github>
@@ -31,51 +59,12 @@ export function App() {
         </div>
       </div>
       <main className='flex-1 p-6 flex gap-6'>
-        <aside className='w-80 space-y-6'>
-          <form className='space-y-6'>
-            <label
-              htmlFor='video'
-              className='border flex rounded-sm aspect-video w-full
-                       cursor-pointer border-dashed text-sm flex-col
-                       gap-2 items-center justify-center text-muted-foreground first-letter hover:bg-secondary/20'
-            >
-              <FileVideo className='h-6 w-6' />
-              Choose Video
-            </label>
-            <input
-              type='file'
-              id='video'
-              accept='video/mp4'
-              className='sr-only'
-            />
-            <Separator />
-            <div className='space-y-2'>
-              <Label htmlFor='transcription_prompt'>Transcription Prompt</Label>
-              <Textarea
-                id='transcription_prompt'
-                className='h-20 leading-relaxed resize-none'
-                placeholder='Include keywords mentioned in the video separated by comma'
-              />
-            </div>
-            <Button type='submit' className='w-full'>
-              Upload video
-              <Upload className='h-4 w-4 ml-2' />
-            </Button>
-          </form>
-          <form className='space-y-6'>
+        <aside className='w-80 space-y-6 p-6 bg-dark bg-card border  rounded-sm'>
+          <VideoInputForm onVideoUploaded={setVideoId} />
+          <form className='space-y-6' onSubmit={handleSubmit}>
             <div className='space-y-2'>
               <Label>Prompt</Label>
-              <Select disabled defaultValue='gpt3.5'>
-                <SelectTrigger>
-                  <SelectValue placeholder='Select a prompt' />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value='title'>Youtube Title</SelectItem>
-                  <SelectItem value='description'>
-                    Youtube Description
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+              <PromptSelect onPromptSelected={setInput} />
               <span className='block text-xs text-muted-foreground italic leading-relaxed'>
                 You'll be able to custsomize this option soon
               </span>
@@ -84,10 +73,10 @@ export function App() {
             <div className='space-y-2'>
               <Label>Model</Label>
               <Select disabled defaultValue='gpt3.5'>
-                <SelectTrigger>
+                <SelectTrigger className='bg-background'>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className='bg-background'>
                   <SelectItem value='gpt3.5'>GPT 3.5-Turbo 16k</SelectItem>
                 </SelectContent>
               </Select>
@@ -96,20 +85,26 @@ export function App() {
               </span>
             </div>
 
-            <Separator />
+            <Separator className='bg-muted-foreground' />
 
             <div className='space-y-4'>
               <Label>Temperature</Label>
-              <Slider min={0} max={1} step={0.1} />
+              <Slider
+                min={0}
+                max={1}
+                step={0.1}
+                value={[temperature]}
+                onValueChange={(value) => setTemperature(value[0])}
+              />
 
               <span className='block text-xs text-muted-foreground italic  leading-relaxed'>
                 Using higher values can boost creativity but might also increase
                 the chances of errors.
               </span>
             </div>
-            <Separator />
+            <Separator className='bg-muted-foreground' />
 
-            <Button type='submit' className='w-full'>
+            <Button type='submit' disabled={isLoading} className='w-full'>
               Execute
               <Wand2 className='h-4 w-4 ml-2' />
             </Button>
@@ -118,6 +113,8 @@ export function App() {
         <div className='flex flex-col flex-1 gap-4'>
           <div className='grid grid-rows-2 gap-4 flex-1'>
             <Textarea
+              value={input}
+              onChange={handleInputChange}
               placeholder='Include your AI prompt...'
               className='resize-none p-6 leading-relaxed'
             />
@@ -125,6 +122,7 @@ export function App() {
               className='resize-none p-6 leading-relaxed'
               placeholder='Include your AI prompt...'
               readOnly
+              value={completion}
             />
           </div>
           <p className='text-sm text-muted-foreground'>
